@@ -1,4 +1,4 @@
 # iShlomo
 My personal finance app
 
-Download the script and the DB to run the GUI
+Download the script, the SQlite DB and the Image to run the GUI on local
