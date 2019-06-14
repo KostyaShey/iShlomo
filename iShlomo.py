@@ -131,7 +131,7 @@ def fetchtotalbalance(monthdata):
 
 def update_text_in_totalbox(monthdata, label, Type):
 	
-	Dictionaryforstring = {"MINC" : "Total income: ", "MEXP" : "Total expences: ", "MONL" : "Money left: ", "BLM" : "Balance from last month: "}
+	Dictionaryforstring = {"MINC" : "Total income: ", "MEXP" : "Total expences: ", "MONL" : "Balance this month: ", "BLM" : "Balance from last month: "}
 	
 	if Type == "MINC" or Type == "MEXP":
 		total = 0
@@ -212,18 +212,21 @@ def addrowtomonth(Typeofvalue, inputwindow, NameEntry, ValueEntry):
 		#this should cause an error if the Value is not a digit
 		int(ValueEntry.get())
 		
-		# counting the values in the table to create a unique id
+		# looking for the highest id value
+		if Typeofvalue == "INC" or Typeofvalue == "EXP":
+			indexforstring = 3
+		if Typeofvalue == "MINC" or Typeofvalue == "MEXP":
+			indexforstring = 4
 		MonthData = fetchmonthdata(currentmonth, currentyear)
 		counter = 0
 		for row in MonthData:
-			print(row)
 			if row[3] == Typeofvalue:
-				counter += 1
+				if int(row[0][indexforstring:]) > counter:
+					counter = int(row[0][indexforstring:])
 
 		params = (Typeofvalue + str(counter + 1), ValueEntry.get(), NameEntry.get(), Typeofvalue)
 		c.execute('INSERT INTO {month}{year} VALUES (?, ?, ?, ?)'.format(month = MONTH[currentmonth], year = currentyear), params)
 		conn.commit()
-		print("Row addded")
 		update_textbox(currentmonth,currentyear)
 		update_totalbox(currentmonth, currentyear)
 		close_window(inputwindow)
@@ -249,6 +252,7 @@ def addtostringwithcheckboxvalues(CheckBox):
 	else:
 		return "0"
 
+#adds a row to monthly expences and income
 def addrowtomonthlytables(Typeofvalue, inputwindow, NameEntry, ValueEntry,\
 			JanVar, FebVar, MarVar, AprVar, MayVar, JunVar, JulVar, AugVar, SepVar, OctVar, NovVar, DecVar, refresh):
 	
@@ -267,8 +271,8 @@ def addrowtomonthlytables(Typeofvalue, inputwindow, NameEntry, ValueEntry,\
 		monthlytable = fetchmonthlytables(Typeofvalue)
 		counter = 0
 		for row in monthlytable:
-			print(row)
-			counter += 1
+			if int(row[0][4:]) > counter:
+				counter = int(row[0][4:])
 
 		#building a string for the month 
 		stringwithcheckboxvalues = ""
@@ -399,6 +403,7 @@ def openinputwindow(Type):
 
 	inputwindow.mainloop()
 
+#fetches the name and value from a month
 def fetchrowfrommonth(Type, Listwithrows, NameEntry, ValueEntry):
 	ID = Listwithrows.curselection()[0] + 1
 	c.execute('SELECT * FROM {month}{year} WHERE ID = "{TYpe}{id}"'.format(month = MONTH[currentmonth], year = currentyear, TYpe = Type, id = ID))
@@ -417,6 +422,19 @@ def saverowfrommonth(Type, Listwithrows, NameEntry, ValueEntry, editwindow):
 	update_textbox(currentmonth, currentyear)
 	update_totalbox(currentmonth, currentyear)
 
+
+def deleterowfrommonth(Type, Listwithrows, editwindow):
+	ID = Listwithrows.curselection()[0] + 1
+	c.execute('SELECT * FROM {month}{year} WHERE ID = "{TYpe}{id}"'.format(month = MONTH[currentmonth], year = currentyear, TYpe = Type, id = ID))
+	row = c.fetchall()
+	c.execute('DELETE FROM {month}{year} WHERE ID = "{TYpe}{id}"'.format(month = MONTH[currentmonth], year = currentyear, TYpe = Type, id = ID))
+	conn.commit()
+	update_textbox(currentmonth, currentyear)
+	update_totalbox(currentmonth, currentyear)
+	close_window(editwindow)
+
+
+#opens window to edit the rows
 def openeditwindow(Type):
 	editwindow = tk.Toplevel()
 	editwindow.title("Edit "+ TYPEOFEXPENCES[Type])
@@ -452,6 +470,9 @@ def openeditwindow(Type):
 
 	saverow = partial(saverowfrommonth, Type, Listwithrows, NameEntry, ValueEntry, editwindow)
 	savebutton = tk.Button(editframe, text = "Save changes", command = saverow).place(relx = 0.05, rely = 0.55, relheight = RELBUTTONHEIGHT, relwidth = 0.9)
+
+	deleterow = partial(deleterowfrommonth, Type, Listwithrows, editwindow)
+	deletebutton = tk.Button(editframe, text = "Delete selection", command = deleterow).place(relx = 0.05, rely = 0.62, relheight = RELBUTTONHEIGHT, relwidth = 0.9)
 
 	editwindow.mainloop()
 
